@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.17;
 
 contract VotingContract {
     address public owner;
@@ -13,7 +13,7 @@ contract VotingContract {
     }
 
     struct Voting {
-        bool strarted;
+        bool started;
         address Winner;
         uint256 startDate;
         uint256 WinnerBalance;
@@ -33,14 +33,14 @@ contract VotingContract {
     }
 
     function getPartInVoting(uint8 _votingID, address _candidate) public payable {
-        require( Votings[_votingID].strarted == true, "Voting not starded yet.");
+        require( Votings[_votingID].started == true, "Voting not starded yet.");
         require(
             Votings[_votingID].startDate + Votings[_votingID].Period < block.timestamp,
             "Voting is end."
         );
-        require(
-           checkCandidate(_votingID, _candidate), 
-           "Candidate does not exist on this voting.");
+        // require(
+        //    checkCandidate(_votingID, _candidate), 
+        //    "Candidate does not exist on this voting.");
 
         Votings[_votingID].Candidates[_candidate].balance += msg.value;
         Votings[_votingID].Bank += msg.value;
@@ -53,29 +53,70 @@ contract VotingContract {
 
     function WithdrawMyPrize(uint256 _votingID) public {
         //проверка, что голосование стартовало
-        require(Votings[_votingID].starded, "Voting hasn't started yet.");
+        require(Votings[_votingID].started, "Voting hasn't started yet.");
         
         //проверка, что закончилось голосование
         require(    
-            Voting[_votingID].startDate + Voting[_votingID].Period > block.timestamp,
+            (Votings[_votingID].startDate + Votings[_votingID].Period) > block.timestamp,
             "Voting hasn't ended yet.");
         
         //провека, что ты победитель
-        require(Voting[_votingID].Winner == msg.sender, "You are not winner!");
+        require(Votings[_votingID].Winner == msg.sender, "You are not winner!");
 
         //проверка, что в банке есть денги
-        require(Voting[_votingID].Bank > 0, "Money already paid");
+        require(Votings[_votingID].Bank > 0, "Money already paid");
         
         //посчитать комиссию
-        uint256 amount = Voting[_votingID].Bank;
+        uint256 amount = Votings[_votingID].Bank;
         uint256 ownerComission = (amount*Comission)/100;
         uint256 prize = amount - ownerComission;
         
         //Обнулить банк
-        Voting[_votingID].Bank = 0;
+        Votings[_votingID].Bank = 0;
         
         //перевести комиссию и награду
         payable(owner).transfer(ownerComission);
         payable(msg.sender).transfer(prize);        
+    }
+
+    function getVotingInfo(uint256 _votingID) public view 
+        returns (
+            bool,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            address
+        )
+    {
+        return (
+            Votings[_votingID].started,        
+            Votings[_votingID].startDate,
+            Votings[_votingID].WinnerBalance,
+            Votings[_votingID].Bank,
+            Votings[_votingID].Period,
+            Votings[_votingID].Winner
+        );
+    }
+
+
+
+    function checkCandidate(uint256 _votingID, uint256 _candidate) public view 
+        returns (bool) 
+    {
+        return (Votings[_votingID].Candidates[_candidate].isExistOnThisVoting)
+    }
+
+
+    function addVoting(uint256 _period, address[] calldata _candidates) 
+        public onlyOwner 
+    {
+        //проверка на количество 
+    }
+
+    
+    modifier onlyOwner() {
+    require(msg.sender == owner);
+    _;
     }
 }
